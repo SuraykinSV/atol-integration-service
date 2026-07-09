@@ -39,7 +39,4 @@ public class AuthService {
         }
     }
 
-//    public String getCurrentToken() {
-//        return currentToken;
-//    }
 }
