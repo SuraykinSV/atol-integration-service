@@ -6,6 +6,7 @@ import com.example.atol_integration_service.dto.AuthResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -26,17 +27,25 @@ public class AuthService {
     public void runTokenUpdate() {
         AuthRequest requestBody = new AuthRequest(login, password);
 
-        AuthResponse response = atolClient.requestToken(requestBody);
+        ResponseEntity<AuthResponse> responseEntity = atolClient.requestToken(requestBody);
 
-        if (response != null && response.getToken() != null && !response.getToken().isBlank()) {
+        if (responseEntity == null || responseEntity.getBody() == null) {
+            log.error("Пустой ответ от АТОЛ");
+            return;
+        }
+
+        AuthResponse response = responseEntity.getBody();
+
+        if (response.getToken() != null && !response.getToken().isBlank()) {
             this.currentToken = response.getToken();
             log.info("Токен успешно получен и сохранен в сервисе: {}", currentToken);
-        } else if (response != null && response.getError() != null) {
-            log.error("Ошибка от АТОЛ: Id [{}], Код [{}], Текст [{}], Тип [{}]", response.getError().getError_id(),
-                    response.getError().getCode(), response.getError().getText(), response.getError().getType());
+        } else if (response.getError() != null) {
+            log.error("Ошибка от АТОЛ: {}", response);
         } else {
             log.error("Пустой ответ от АТОЛ");
         }
     }
+
+
 
 }
