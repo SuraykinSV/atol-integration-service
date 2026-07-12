@@ -1,6 +1,5 @@
 package com.example.atol_integration_service.controllers;
 import com.example.atol_integration_service.dto.TransactionDto;
-import com.example.atol_integration_service.service.AuthService;
 import com.example.atol_integration_service.service.ReceiptService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,7 +30,7 @@ public class ReceiptController {
 
     @GetMapping("/{id}")
     public ResponseEntity<?> getReceiptInfo(@PathVariable String id) {
-        log.info("Информации о чеке: {}", id);
+        log.info("Запрошена информация о чеке: {}", id);
 
         var receiptRecord = receiptService.getReceiptInfo(id);
 
