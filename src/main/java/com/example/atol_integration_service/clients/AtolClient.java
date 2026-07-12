@@ -1,6 +1,7 @@
 package com.example.atol_integration_service.clients;
 
 
+import com.example.atol_integration_service.dto.AtolReceiptDto;
 import com.example.atol_integration_service.dto.AuthRequest;
 import com.example.atol_integration_service.dto.AuthResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -9,13 +10,16 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 
 @Component
 @Slf4j
 public class AtolClient {
 
     private final RestClient restClient;
+
+    @Value("${atol.api.group-code}")
+    private String groupCode;
 
     public AtolClient(@Value("${atol.api.url}") String baseUrl) {
         this.restClient = RestClient.builder()
@@ -32,8 +36,26 @@ public class AtolClient {
                     .body(requestBody)
                     .retrieve()
                     .toEntity(AuthResponse.class);
-        } catch (RestClientException e) {
+        } catch (RestClientResponseException e) {
             log.error("Ошибка при обращении к АТОЛ: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    public ResponseEntity<String> sendReceipt(String token, AtolReceiptDto requestBody) {
+        try {
+            log.info("Отправка чека {} на сервер АТОЛ...", requestBody.getExternal_id());
+            return restClient.post()
+                    .uri("/" + groupCode + "/sell")
+                    .header("Token", token)
+                    .body(requestBody)
+                    .retrieve()
+                    .toEntity(String.class);
+        } catch (RestClientResponseException e) {
+            log.error("Ошибка от АТОЛ при регистрации чека: {}", e.getResponseBodyAsString());
+            return ResponseEntity.status(e.getStatusCode()).body(e.getResponseBodyAsString());
+        } catch (Exception e) {
+            log.error("Критическая ошибка при отправке чека", e);
             return null;
         }
     }
