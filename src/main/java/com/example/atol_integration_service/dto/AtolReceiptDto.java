@@ -33,7 +33,6 @@ public class AtolReceiptDto {
         private TaxSystem sno;
         private String inn;
         private String payment_address;
-       // private String location;
     }
 
     @Data @Builder

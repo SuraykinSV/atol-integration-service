@@ -14,17 +14,6 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 public class ReceiptStorage {
 
-//    @Data
-//    public static class ReceiptRecord {
-//        private AtolReceiptDto receipt;
-//        private String status;
-//
-//        public ReceiptRecord(AtolReceiptDto receipt, String status) {
-//            this.receipt = receipt;
-//            this.status = status;
-//        }
-//    }
-
     private final Map<String, ReceiptRecord> storage = new ConcurrentHashMap<>();
 
     public void save(String id, AtolReceiptDto receiptDto, ReceiptStatus status) {

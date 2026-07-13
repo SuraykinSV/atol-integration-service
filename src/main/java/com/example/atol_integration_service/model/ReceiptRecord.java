@@ -6,7 +6,6 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
 
 @Data
 @AllArgsConstructor
@@ -15,7 +14,6 @@ public class ReceiptRecord {
     private String id;
     private AtolReceiptDto receipt;
     private ReceiptStatus status;
-    //private LocalDateTime createdAt;
 
     public ReceiptRecord(AtolReceiptDto receipt, ReceiptStatus status) {
             this.receipt = receipt;
