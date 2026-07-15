@@ -51,7 +51,6 @@ public class TransactionDto {
     public static class PaymentDto {
         @JsonProperty("payment_type")
         private PaymentType paymentType;
-
         private Double amt;
     }
 }
