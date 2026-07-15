@@ -1,5 +1,6 @@
 package com.example.atol_integration_service.dto;
 
+import com.example.atol_integration_service.enums.*;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import java.util.List;
@@ -17,12 +18,12 @@ public class TransactionDto {
     @Data
     public static class ItemDto {
         private String desc;
-        private String type;
+        private PaymentObject type;
         private Double quantity;
         private Double price;
-        private Integer measure;
-        private String taxRate;
-        private String mode;
+        private Measure measure;
+        private VatType taxRate;
+        private PaymentMethod mode;
         private String prodCode;
     }
 
@@ -32,7 +33,7 @@ public class TransactionDto {
         private String taxId;
 
         @JsonProperty("tax_system")
-        private String taxSystem;
+        private TaxSystem taxSystem;
 
         private String email;
 
@@ -49,7 +50,7 @@ public class TransactionDto {
     @Data
     public static class PaymentDto {
         @JsonProperty("payment_type")
-        private String paymentType;
+        private PaymentType paymentType;
 
         private Double amt;
     }

@@ -1,16 +1,19 @@
 package com.example.atol_integration_service.dto;
 
 import com.example.atol_integration_service.enums.*;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Builder;
 import lombok.Data;
 import java.util.List;
 
 @Data
 @Builder
+
 public class AtolReceiptDto {
     private String external_id;
     private String timestamp;
     private Receipt receipt;
+
 
     @Data @Builder
     public static class Receipt {
@@ -18,13 +21,13 @@ public class AtolReceiptDto {
         private Company company;
         private List<Item> items;
         private List<Payment> payments;
-        private List<Vat> vats;
         private Double total;
     }
 
     @Data @Builder
     public static class Client {
         private String email;
+        private String phone;
     }
 
     @Data @Builder
@@ -50,7 +53,6 @@ public class AtolReceiptDto {
     @Data @Builder
     public static class Vat {
         private VatType type;
-        private Double sum;
     }
 
     @Data @Builder
