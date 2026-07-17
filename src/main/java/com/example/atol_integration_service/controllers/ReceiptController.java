@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/receipts")
@@ -15,25 +16,17 @@ public class ReceiptController {
     private final ReceiptService receiptService;
 
     @PostMapping
-    public ResponseEntity<String> recieveTransaction(@RequestBody TransactionDto transaction) {
+    public ResponseEntity<String> recieveTransaction(@Valid @RequestBody TransactionDto transaction) {
         log.info("Получена транзакция: {}", transaction);
 
-        if(transaction != null && transaction.getId() != null) {
-            log.info("Id транзакции: {}", transaction.getId());
-            receiptService.processTransaction(transaction);
-            return ResponseEntity.ok("Транзакция принята");
-        }else{
-            log.warn("В транзакции отсутсвует id");
-            return ResponseEntity.badRequest().body("Ошибка: транзакция не содержит id");
-        }
+        receiptService.processTransaction(transaction);
+        return ResponseEntity.ok("Транзакция принята в обработку");
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<?> getReceiptInfo(@PathVariable String id) {
         log.info("Запрошена информация о чеке: {}", id);
-
         var receiptRecord = receiptService.getReceiptInfo(id);
-
         if (receiptRecord != null) {
             return ResponseEntity.ok(receiptRecord);
         } else {

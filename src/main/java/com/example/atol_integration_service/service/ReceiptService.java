@@ -4,6 +4,7 @@ import com.example.atol_integration_service.clients.AtolClient;
 import com.example.atol_integration_service.dto.AtolReceiptDto;
 import com.example.atol_integration_service.dto.TransactionDto;
 import com.example.atol_integration_service.enums.*;
+import com.example.atol_integration_service.exceptions.ValidationException;
 import com.example.atol_integration_service.mapper.ReceiptMapper;
 import com.example.atol_integration_service.model.ReceiptRecord;
 import com.example.atol_integration_service.repository.ReceiptRepository;
@@ -23,6 +24,7 @@ public class ReceiptService {
     private final ReceiptRepository receiptRepository;
 
     public void processTransaction(TransactionDto transaction) {
+        validateTransactionBusinessLogic(transaction);
         log.info("Начало обработки транзакции: {}", transaction.getId());
 
         AtolReceiptDto receiptDto = receiptMapper.mapToAtolDto(transaction);
@@ -65,4 +67,22 @@ public class ReceiptService {
     }
 
     public ReceiptRecord getReceiptInfo(String transactionId) {return receiptRepository.findById(transactionId).orElse(null);}
+
+    private void validateTransactionBusinessLogic(TransactionDto td) {
+        double calculatedItemsSum = td.getItems().stream()
+                .mapToDouble(item -> item.getPrice() * item.getQuantity())
+                .sum();
+
+        double calculatedPaymentsSum = td.getPayments().stream()
+                .mapToDouble(TransactionDto.PaymentDto::getAmt)
+                .sum();
+
+        if (Math.abs(calculatedItemsSum - td.getAmount()) >= 0.01) {
+            throw new ValidationException(String.format("Сумма товаров (%.2f) не совпадает с итоговой суммой чека (%.2f)", calculatedItemsSum, td.getAmount()));
+        }
+
+        if (Math.abs(calculatedPaymentsSum - td.getAmount()) >= 0.01) {
+            throw new ValidationException(String.format("Внесенная оплата (%.2f) не покрывает итоговую сумму чека (%.2f)", calculatedPaymentsSum, td.getAmount()));
+        }
+    }
 }
