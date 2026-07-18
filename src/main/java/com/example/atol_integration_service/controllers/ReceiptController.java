@@ -33,5 +33,17 @@ public class ReceiptController {
             return ResponseEntity.notFound().build();
         }
     }
+    @GetMapping("/check/{uuid}")
+    public ResponseEntity<String> forceCheck(@PathVariable String uuid) {
+        log.info("Запрошена ручная проверка статуса для чека: {}", uuid);
+
+        try {
+            receiptService.checkAndSaveFiscalData(uuid);
+            return ResponseEntity.ok("Запрос статуса успешно выполнен для: " + uuid);
+        } catch (Exception e) {
+            log.error("Ошибка при ручной проверке статуса: {}", e.getMessage());
+            return ResponseEntity.status(500).body("Ошибка при проверке: " + e.getMessage());
+        }
+    }
 
 }

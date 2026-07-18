@@ -2,6 +2,7 @@ package com.example.atol_integration_service.clients;
 
 
 import com.example.atol_integration_service.dto.AtolReceiptDto;
+import com.example.atol_integration_service.dto.AtolResponseDto;
 import com.example.atol_integration_service.dto.AuthRequest;
 import com.example.atol_integration_service.dto.AuthResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -42,21 +43,21 @@ public class AtolClient {
         }
     }
 
-    public ResponseEntity<String> sendReceipt(String token, AtolReceiptDto requestBody) {
-        try {
-            log.info("Отправка чека {} на сервер АТОЛ...", requestBody.getExternal_id());
-            return restClient.post()
-                    .uri("/" + groupCode + "/sell")
-                    .header("Token", token)
-                    .body(requestBody)
-                    .retrieve()
-                    .toEntity(String.class);
-        } catch (RestClientResponseException e) {
-            log.error("Ошибка от АТОЛ при регистрации чека: {}", e.getResponseBodyAsString());
-            return ResponseEntity.status(e.getStatusCode()).body(e.getResponseBodyAsString());
-        } catch (Exception e) {
-            log.error("Критическая ошибка при отправке чека", e);
-            return null;
-        }
+    public AtolResponseDto sendReceipt(String token, AtolReceiptDto requestBody) {
+        log.info("Отправка чека {} на сервер АТОЛ...", requestBody.getExternal_id());
+        return restClient.post()
+                .uri("/{groupCode}/sell", groupCode)
+                .header("Token", token)
+                .body(requestBody)
+                .retrieve()
+                .body(AtolResponseDto.class);
+    }
+    public AtolResponseDto getReceiptStatus(String uuid, String token) {
+
+        return restClient.get()
+                .uri("/{groupCode}/report/{uuid}", groupCode, uuid)
+                .header("Token", token)
+                .retrieve()
+                .body(AtolResponseDto.class);
     }
 }

@@ -1,6 +1,7 @@
 package com.example.atol_integration_service.model;
 
 import com.example.atol_integration_service.dto.AtolReceiptDto;
+import com.example.atol_integration_service.dto.AtolResponseDto;
 import com.example.atol_integration_service.enums.ReceiptStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -25,4 +26,12 @@ public class ReceiptRecord {
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     private ReceiptStatus status;
+
+    @Column(name = "atol_uuid")
+    private String atolUuid;
+
+    @Column(name = "fiscal_data", columnDefinition = "jsonb", nullable = false)
+    @JdbcTypeCode(SqlTypes.JSON)
+    private AtolResponseDto.PayloadDto fiscalData;
+
 }

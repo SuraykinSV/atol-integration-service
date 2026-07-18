@@ -2,16 +2,15 @@ package com.example.atol_integration_service.enums;
 
 import com.fasterxml.jackson.annotation.JsonValue;
 
-public enum ReceiptStatus {
-    DRAFT("DRAFT"),
-    WAIT("wait"),
-    DONE("done"),
-    ERROR_NO_TOKEN("ERROR_NO_TOKEN"),
-    ERROR_REGISTRATION("ERROR_REGISTRATION"),
-    FAIL("fail");
+public enum RegistrationErrorType {
+    SYSTEM("system"),
+    DRIVER("driver"),
+    TIMEOUT("timeout"),
+    UNKNOWN("unknown");
+
     private final String value;
 
-    ReceiptStatus(String value) {
+    RegistrationErrorType(String value) {
         this.value = value;
     }
 
