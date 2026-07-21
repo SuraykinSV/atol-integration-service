@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Data
@@ -25,7 +26,7 @@ public class AtolReceiptDto {
         private Company company;
         private List<Item> items;
         private List<Payment> payments;
-        private Double total;
+        private BigDecimal total;
     }
     @NoArgsConstructor
     @AllArgsConstructor
@@ -48,10 +49,10 @@ public class AtolReceiptDto {
     @Data @Builder
     public static class Item {
         private String name;
-        private double price;
-        private double quantity;
+        private BigDecimal price;
+        private BigDecimal quantity;
         private Measure measure;
-        private double sum;
+        private BigDecimal sum;
         private PaymentMethod payment_method;
         private PaymentObject payment_object;
         private Vat vat;
@@ -67,6 +68,6 @@ public class AtolReceiptDto {
     @Data @Builder
     public static class Payment {
         private PaymentType type;
-        private double sum;
+        private BigDecimal sum;
     }
 }

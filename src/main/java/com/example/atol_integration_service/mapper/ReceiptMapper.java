@@ -4,6 +4,7 @@ import com.example.atol_integration_service.dto.AtolReceiptDto;
 import com.example.atol_integration_service.dto.TransactionDto;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -27,15 +28,15 @@ public class ReceiptMapper {
                 .phone(td.getConsumer().getPhone())
                 .build();
 
-        double totalSum = 0.0;  //
-
+        BigDecimal totalSum = BigDecimal.ZERO;  //
         List<AtolReceiptDto.Item> atolItems = new ArrayList<>();    //
+
         for (TransactionDto.ItemDto tdItem : td.getItems()) {
 
-            double price = tdItem.getPrice();
-            double quantity = tdItem.getQuantity();
-            double sum = price * quantity;
-            totalSum += sum;
+            BigDecimal price = tdItem.getPrice();
+            BigDecimal quantity = tdItem.getQuantity();
+            BigDecimal sum = price.multiply(quantity);
+            totalSum = totalSum.add(sum);
 
             atolItems.add(AtolReceiptDto.Item.builder()
                     .name(tdItem.getDesc())
@@ -50,10 +51,10 @@ public class ReceiptMapper {
         }
 
         List<AtolReceiptDto.Payment> atolPayments = new ArrayList<>();  //
-        for (TransactionDto.PaymentDto txPayment : td.getPayments()) {
+        for (TransactionDto.PaymentDto tdPayment : td.getPayments()) {
             atolPayments.add(AtolReceiptDto.Payment.builder()
-                    .type(txPayment.getPaymentType())
-                    .sum(txPayment.getAmt())
+                    .type(tdPayment.getPaymentType())
+                    .sum(tdPayment.getAmt())
                     .build());
         }
 

@@ -1,4 +1,5 @@
 package com.example.atol_integration_service.controllers;
+import com.example.atol_integration_service.dto.GeneralResponse;
 import com.example.atol_integration_service.dto.TransactionDto;
 import com.example.atol_integration_service.service.ReceiptService;
 import lombok.RequiredArgsConstructor;
@@ -6,6 +7,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
+
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 @RestController
 @RequestMapping("/api/receipts")
@@ -16,34 +20,28 @@ public class ReceiptController {
     private final ReceiptService receiptService;
 
     @PostMapping
-    public ResponseEntity<String> recieveTransaction(@Valid @RequestBody TransactionDto transaction) {
-        log.info("Получена транзакция: {}", transaction);
+    public ResponseEntity<GeneralResponse<String>> recieveTransaction(@Valid @RequestBody TransactionDto transaction) {
+        log.info("Получена транзакция: {}", transaction.getId());
 
         receiptService.processTransaction(transaction);
-        return ResponseEntity.ok("Транзакция принята в обработку");
+
+        GeneralResponse<String> response = GeneralResponse.<String>builder()
+                .status("DONE")
+                .message("Транзакция принята в обработку")
+                .timestamp(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")))
+                .data(transaction.getId())
+                .build();
+        return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<?> getReceiptInfo(@PathVariable String id) {
-        log.info("Запрошена информация о чеке: {}", id);
-        var receiptRecord = receiptService.getReceiptInfo(id);
-        if (receiptRecord != null) {
-            return ResponseEntity.ok(receiptRecord);
-        } else {
-            return ResponseEntity.notFound().build();
-        }
-    }
-    @GetMapping("/check/{uuid}")
-    public ResponseEntity<String> forceCheck(@PathVariable String uuid) {
-        log.info("Запрошена ручная проверка статуса для чека: {}", uuid);
 
-        try {
-            receiptService.checkAndSaveFiscalData(uuid);
-            return ResponseEntity.ok("Запрос статуса успешно выполнен для: " + uuid);
-        } catch (Exception e) {
-            log.error("Ошибка при ручной проверке статуса: {}", e.getMessage());
-            return ResponseEntity.status(500).body("Ошибка при проверке: " + e.getMessage());
-        }
+    @GetMapping("/check/{transactionId}")
+    public ResponseEntity<GeneralResponse<?>> getReceiptStatus(@PathVariable String transactionId) {
+        log.info("Запрошена ручная проверка статуса для транзакции: {}", transactionId);
+
+        GeneralResponse<?> response = receiptService.checkFiscalData(transactionId);
+
+        return ResponseEntity.ok(response);
     }
 
 }

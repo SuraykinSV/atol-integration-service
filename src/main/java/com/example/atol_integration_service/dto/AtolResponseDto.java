@@ -9,7 +9,7 @@ import lombok.Data;
 public class AtolResponseDto {
     private String uuid;
     private String timestamp;
-    private ReceiptStatus status;
+    private String status;
     private ErrorDto error;
     private PayloadDto payload;
 

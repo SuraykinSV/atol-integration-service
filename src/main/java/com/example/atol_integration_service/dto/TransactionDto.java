@@ -3,11 +3,10 @@ package com.example.atol_integration_service.dto;
 import com.example.atol_integration_service.enums.*;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.*;
 import lombok.Data;
+
+import java.math.BigDecimal;
 import java.util.List;
 
 @Data
@@ -18,8 +17,8 @@ public class TransactionDto {
     private String type;
 
     @NotNull(message = "Итоговая сумма обязательна")
-    @Min(value = 0, message = "Сумма не может быть отрицательной")
-    private Double amount;
+    @DecimalMin(value = "0.0", message = "Сумма не может быть отрицательной")
+    private BigDecimal amount;
 
     @NotEmpty(message = "Чек должен содержать хотя бы один товар")
     private List<ItemDto> items;
@@ -42,12 +41,12 @@ public class TransactionDto {
         private PaymentObject type;
 
         @NotNull(message = "Количество обязательно")
-        @Min(value = 0, message = "Количество должно быть больше 0")
-        private Double quantity;
+        @DecimalMin(value = "0.0", message = "Количество должно быть больше 0")
+        private BigDecimal quantity;
 
         @NotNull(message = "Цена обязательна")
-        @Min(value = 0, message = "Цена не может быть отрицательной")
-        private Double price;
+        @DecimalMin(value = "0.0", message = "Цена не может быть отрицательной")
+        private BigDecimal price;
 
         @NotNull(message = "Единица измерения обязательна")
         private Measure measure;
@@ -92,6 +91,6 @@ public class TransactionDto {
         private PaymentType paymentType;
         @NotNull(message = "Сумма оплаты обязательна")
         @Min(value = 0, message = "Сумма оплаты не может быть отрицательной")
-        private Double amt;
+        private BigDecimal amt;
     }
 }
