@@ -19,7 +19,7 @@ public class ReceiptRecord {
     @Id
     private String id;
 
-    @Column(name = "receipt_data", nullable = false)
+    @Column(name = "receipt_data", columnDefinition = "jsonb", nullable = false)
     @JdbcTypeCode(SqlTypes.JSON)
     private AtolReceiptDto receiptData;
 
@@ -34,4 +34,6 @@ public class ReceiptRecord {
     @JdbcTypeCode(SqlTypes.JSON)
     private AtolResponseDto.PayloadDto fiscalData;
 
+    @Column(name = "error_details", columnDefinition = "TEXT")
+    private String errorDetails;
 }

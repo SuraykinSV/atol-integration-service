@@ -3,11 +3,9 @@ package com.example.atol_integration_service.enums;
 import com.fasterxml.jackson.annotation.JsonValue;
 
 public enum ReceiptStatus {
-    DRAFT("DRAFT"),
     WAIT("wait"),
     DONE("done"),
     ERROR_NO_TOKEN("ERROR_NO_TOKEN"),
-    ERROR_REGISTRATION("ERROR_REGISTRATION"),
     FAIL("fail");
     private final String value;
 

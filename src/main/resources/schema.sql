@@ -3,6 +3,7 @@ CREATE TABLE receipts (
     receipt_data JSONB NOT NULL,
     status VARCHAR(20) NOT NULL,
     atol_uuid VARCHAR(255),
-    fiscal_data JSONB
+    fiscal_data JSONB,
+    error_details TEXT
 );
-
+DROP TABLE receipts;

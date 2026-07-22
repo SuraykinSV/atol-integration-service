@@ -13,6 +13,7 @@ import com.example.atol_integration_service.repository.ReceiptRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpStatusCodeException;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -28,44 +29,57 @@ public class ReceiptService {
     private final ReceiptMapper receiptMapper;
     private final ReceiptRepository receiptRepository;
 //
-    public void processTransaction(TransactionDto transaction) {
+    public GeneralResponse<?> processTransaction(TransactionDto transaction) {
         validateTransactionBusinessLogic(transaction);
         log.info("Начало обработки транзакции: {}", transaction.getId());
 
         AtolReceiptDto receiptDto = receiptMapper.mapToAtolDto(transaction);
-
         String token = authService.getValidToken();
+
+        ReceiptRecord record = new ReceiptRecord();
+        record.setId(transaction.getId());
+        record.setReceiptData(receiptDto);
+
         if (token == null || token.isBlank()) {
             log.error("Невозможно отправить чек, токен не получен.");
             saveFailedReceipt(transaction.getId(), receiptDto, ReceiptStatus.ERROR_NO_TOKEN);
-            return;
+            return new GeneralResponse<>(ReceiptStatus.WAIT.toString(),
+                    "Нет токена, отправка отложена",LocalDateTime.now().toString(),null);
         }
 
          try {
-            AtolResponseDto response = atolClient.sendReceipt(token, receiptDto);
-            ReceiptRecord record = new ReceiptRecord();
-            record.setId(transaction.getId());
-            record.setReceiptData(receiptDto);
+             AtolResponseDto response = atolClient.sendReceipt(token, receiptDto);
 
-            if (response != null && response.getUuid() != null) {
-                record.setAtolUuid(response.getUuid());
-                record.setStatus(ReceiptStatus.WAIT);
-                log.info("Чек {} отправлен в АТОЛ. UUID: {}", transaction.getId(), response.getUuid());
-            } else {
-                record.setStatus(ReceiptStatus.ERROR_REGISTRATION);
-                log.error("АТОЛ вернул пустой UUID для чека {}", transaction.getId());
-            }
-            receiptRepository.save(record);
+             record.setAtolUuid(response.getUuid());
+             record.setStatus(ReceiptStatus.WAIT);
+             receiptRepository.save(record);
 
-        } catch (Exception e) {
-            log.error("Ошибка при отправке чека {} в АТОЛ", transaction.getId(), e);
-            saveFailedReceipt(transaction.getId(), receiptDto, ReceiptStatus.ERROR_REGISTRATION);
-        }
+             return new GeneralResponse<>(ReceiptStatus.WAIT.toString(), "Чек передан в АТОЛ, обрабатывается",
+                     LocalDateTime.now().toString(), transaction.getId());
+         }catch (HttpStatusCodeException e) {
+
+             if (e.getStatusCode().is4xxClientError()) {
+                 record.setStatus(ReceiptStatus.FAIL);
+                 record.setErrorDetails(e.getResponseBodyAsString());
+                 receiptRepository.save(record);
+                 return new GeneralResponse<>(ReceiptStatus.FAIL.toString(), e.getResponseBodyAsString(), LocalDateTime.now().toString(), null);
+
+             } else if (e.getStatusCode().is5xxServerError()) {
+                 record.setStatus(ReceiptStatus.WAIT);
+                 receiptRepository.save(record);
+
+                 return new GeneralResponse<>(ReceiptStatus.WAIT.toString(), "Проблемы на стороне кассы, повторим позже", LocalDateTime.now().toString(), null);
+             }
+
+         } catch (Exception e) {
+             record.setStatus(ReceiptStatus.WAIT);
+             receiptRepository.save(record);
+             return new GeneralResponse<>(ReceiptStatus.WAIT.toString(), "Сетевая ошибка, повторим позже", LocalDateTime.now().toString(), null);
+         }
+
+        return new GeneralResponse<>(ReceiptStatus.FAIL.toString(), "Неизвестная ошибка", LocalDateTime.now().toString(), null);
     }
-
-
     /*public ReceiptRecord getReceiptInfo(String transactionId) {return receiptRepository.findById(transactionId).orElse(null);}*/
-
 //
     private void validateTransactionBusinessLogic(TransactionDto td) {
 
@@ -111,64 +125,81 @@ public class ReceiptService {
     }
 
 //
-public GeneralResponse<?> checkFiscalData(String transactionId) {
+    public GeneralResponse<?> checkFiscalData(String transactionId) {
     log.info("Проверяем статус чека для транзакции: {}", transactionId);
-
     ReceiptRecord record = receiptRepository.findById(transactionId)
             .orElseThrow(() -> new ValidationException("Транзакция с ID " + transactionId + " не найдена в БД"));
-
-    if (record.getStatus() == ReceiptStatus.DONE && record.getFiscalData() != null) {
-        return new GeneralResponse<>(ReceiptStatus.DONE.toString(), "Фискальные данные получены",
-                LocalDateTime.now().toString(), record.getFiscalData());
+    if (record.getStatus() == ReceiptStatus.DONE) {
+        return new GeneralResponse<>(ReceiptStatus.DONE.toString(), "Чек успешно зарегистрирован", LocalDateTime.now().toString(), record.getFiscalData());
+    } else if (record.getStatus() == ReceiptStatus.FAIL) {
+        return new GeneralResponse<>(ReceiptStatus.FAIL.toString(), record.getErrorDetails(), LocalDateTime.now().toString(), null);
+    } else {
+        return new GeneralResponse<>(ReceiptStatus.WAIT.toString(), "Чек обрабатывается", LocalDateTime.now().toString(), null);
     }
-
-    if (record.getStatus() == ReceiptStatus.ERROR_NO_TOKEN || record.getStatus() == ReceiptStatus.ERROR_REGISTRATION) {
-        return new GeneralResponse<>(ReceiptStatus.ERROR_REGISTRATION.toString(), "Ошибка на этапе отправки чека в АТОЛ",
-                LocalDateTime.now().toString(), record.getReceiptData());
     }
-
-    if (record.getAtolUuid() != null) {
-        String token = authService.getValidToken();
-        if (token == null || token.isBlank()) {
-            return new GeneralResponse<>(ReceiptStatus.WAIT.toString(), "Внутренняя ошибка: нет токена для опроса АТОЛ",
-                    LocalDateTime.now().toString(), null);
+//
+    public void handleWaitReceipt(ReceiptRecord record) {
+        if (record.getAtolUuid() == null) {
+            retrySendToAtol(record);
+        } else {
+            fetchFiscalDataFromAtol(record);
         }
+    }
+
+    private void retrySendToAtol(ReceiptRecord record) {
+        log.info("[ШЕДУЛЕР] Попытка повторной отправки чека {}", record.getId());
+        String token = authService.getValidToken();
+
+        if (token == null || token.isBlank()) return;
+
+        try {
+            AtolResponseDto response = atolClient.sendReceipt(token, record.getReceiptData());
+
+            if (response != null && response.getUuid() != null) {
+                record.setAtolUuid(response.getUuid());
+                log.info("[ШЕДУЛЕР] Чек {} успешно доставлен. UUID: {}", record.getId(), response.getUuid());
+                receiptRepository.save(record);
+            }
+        } catch (org.springframework.web.client.HttpStatusCodeException e) {
+            if (e.getStatusCode().is4xxClientError()) {
+                record.setStatus(ReceiptStatus.FAIL);
+                record.setErrorDetails(e.getResponseBodyAsString());
+                receiptRepository.save(record);
+            }
+        } catch (Exception e) {
+            log.warn("[ШЕДУЛЕР] Не удалось связаться с АТОЛ . Причина: {}", e.getMessage());
+        }
+    }
+
+    private void fetchFiscalDataFromAtol(ReceiptRecord record) {
+        log.info("[ШЕДУЛЕР] Запрос статуса регистрации для чека {} (UUID: {})", record.getId(), record.getAtolUuid());
+        String token = authService.getValidToken();
+
+        if (token == null || token.isBlank()) return;
 
         try {
             AtolResponseDto response = atolClient.getReceiptStatus(record.getAtolUuid(), token);
 
-            if (response == null) {
-                return new GeneralResponse<>(ReceiptStatus.WAIT.toString(), "Нет ответа от АТОЛ (null)",
-                        LocalDateTime.now().toString(), null);
-            }
+            if (response == null || response.getStatus() == null) return;
 
             ReceiptStatus newStatus = mapAtolStatus(response.getStatus());
 
-            if (newStatus == ReceiptStatus.DONE && response.getPayload() != null) {
-                record.setStatus(newStatus);
+            if (newStatus == ReceiptStatus.DONE) {
+                record.setStatus(ReceiptStatus.DONE);
                 record.setFiscalData(response.getPayload());
+                log.info("[ШЕДУЛЕР] Фискальные данные для чека {} успешно получены", record.getId());
                 receiptRepository.save(record);
-                return new GeneralResponse<>(ReceiptStatus.DONE.toString(), "Фискальные данные успешно получены",
-                        LocalDateTime.now().toString(), response.getPayload());
             }
             else if (newStatus == ReceiptStatus.FAIL) {
-                record.setStatus(newStatus);
+                record.setStatus(ReceiptStatus.FAIL);
+                String errorMsg = response.getError() != null ? response.getError().toString() : "Ошибка фискализации";
+                record.setErrorDetails(errorMsg);
+                log.error("[ШЕДУЛЕР] АТОЛ отклонил чек {}", record.getId());
                 receiptRepository.save(record);
-                return new GeneralResponse<>(ReceiptStatus.FAIL.toString(), "АТОЛ отклонил чек при фискализации",
-                        LocalDateTime.now().toString(), response.getError());
             }
-            else {
-                return new GeneralResponse<>(ReceiptStatus.WAIT.toString(), "Чек находится в очереди на пробитие (wait)",
-                        LocalDateTime.now().toString(), null);
-            }
-
         } catch (Exception e) {
-            log.error("Сетевая или системная ошибка при обращении к АТОЛ: {}", e.getMessage());
-            return new GeneralResponse<>(ReceiptStatus.WAIT.toString(), "Сервис АТОЛ временно недоступен",
-                    LocalDateTime.now().toString(), null);
+            log.warn("[ШЕДУЛЕР] Не удалось связаться с АТОЛ. Причина: {}", e.getMessage());
         }
     }
+}
 
-    return new GeneralResponse<>(ReceiptStatus.WAIT.toString(), "Чек обрабатывается", LocalDateTime.now().toString(), null);
-}
-}
