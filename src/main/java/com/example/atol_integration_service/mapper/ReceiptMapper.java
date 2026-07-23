@@ -28,7 +28,6 @@ public class ReceiptMapper {
                 .phone(td.getConsumer().getPhone())
                 .build();
 
-        BigDecimal totalSum = BigDecimal.ZERO;  //
         List<AtolReceiptDto.Item> atolItems = new ArrayList<>();    //
 
         for (TransactionDto.ItemDto tdItem : td.getItems()) {
@@ -36,7 +35,6 @@ public class ReceiptMapper {
             BigDecimal price = tdItem.getPrice();
             BigDecimal quantity = tdItem.getQuantity();
             BigDecimal sum = price.multiply(quantity);
-            totalSum = totalSum.add(sum);
 
             atolItems.add(AtolReceiptDto.Item.builder()
                     .name(tdItem.getDesc())
@@ -66,7 +64,7 @@ public class ReceiptMapper {
                         .company(company)
                         .items(atolItems)
                         .payments(atolPayments)
-                        .total(totalSum)
+                        .total(td.getAmount())
                         .build())
                 .build();
     }

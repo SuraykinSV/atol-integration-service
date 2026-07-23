@@ -79,8 +79,7 @@ public class ReceiptService {
 
         return new GeneralResponse<>(ReceiptStatus.FAIL.toString(), "Неизвестная ошибка", LocalDateTime.now().toString(), null);
     }
-    /*public ReceiptRecord getReceiptInfo(String transactionId) {return receiptRepository.findById(transactionId).orElse(null);}*/
-//
+    //
     private void validateTransactionBusinessLogic(TransactionDto td) {
 
         BigDecimal calculatedItemsSum = BigDecimal.ZERO;
